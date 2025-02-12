@@ -1,4 +1,4 @@
-const dbg = @import("dbgutils");
+const dbg = @import("dbg");
 const std = @import("std");
 
 pub usingnamespace @import("parser.zig");

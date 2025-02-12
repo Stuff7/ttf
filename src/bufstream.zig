@@ -1,5 +1,5 @@
 const std = @import("std");
-const dbg = @import("dbgutils");
+const dbg = @import("dbg");
 
 pub const BufStream = struct {
     buf: []u8,

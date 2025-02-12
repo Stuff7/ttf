@@ -1,5 +1,5 @@
 const std = @import("std");
-const dbg = @import("dbgutils");
+const dbg = @import("dbg");
 
 const Vec2 = @import("zml").Vec2;
 const BufStream = @import("bufstream.zig").BufStream;

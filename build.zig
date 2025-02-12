@@ -8,7 +8,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = .Debug,
         .src_path = "src/main.zig",
         .module = b.addModule("ttf", .{ .root_source_file = b.path("src/lib.zig") }),
-        .dependencies = @constCast(&[_][]const u8{ "dbgutils", "zml", "utf8utils" }),
+        .dependencies = @constCast(&[_][]const u8{ "dbg", "zml", "utf8" }),
     };
     _ = addBuildOption(b, info, .{ .name = "debug", .desc = "Debug build" });
 
