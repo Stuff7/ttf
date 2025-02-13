@@ -1,4 +1,4 @@
-const dbg = @import("dbg");
+const dbg = @import("zut").dbg;
 const BufStream = @import("../bufstream.zig").BufStream;
 
 pub const HeadTable = struct {

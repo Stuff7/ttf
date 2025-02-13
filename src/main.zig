@@ -1,8 +1,10 @@
 const std = @import("std");
 const gm = @import("zml");
-const dbg = @import("dbg");
+const zut = @import("zut");
 const ttf = @import("ttf");
-const utf8 = @import("utf8");
+
+const dbg = zut.dbg;
+const utf8 = zut.utf8;
 
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);

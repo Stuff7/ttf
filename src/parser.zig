@@ -1,7 +1,7 @@
 const std = @import("std");
-const dbg = @import("dbg");
 
-const Ttf = @import("lib.zig").Ttf;
+const dbg = @import("zut").dbg;
+const Ttf = @import("ttf.zig").Ttf;
 const BufStream = @import("bufstream.zig").BufStream;
 const HeadTable = @import("tables/head.zig").HeadTable;
 const MaxpTable = @import("tables/maxp.zig").MaxpTable;

@@ -1,4 +1,3 @@
-const dbg = @import("dbg");
 const std = @import("std");
 
 pub usingnamespace @import("parser.zig");
@@ -14,6 +13,7 @@ pub usingnamespace @import("tables/loca.zig");
 pub usingnamespace @import("tables/glyf.zig");
 pub usingnamespace @import("tables/maxp.zig");
 
+const dbg = @import("zut").dbg;
 const BufStream = @import("bufstream.zig").BufStream;
 
 pub const Ttf = struct {

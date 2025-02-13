@@ -1,11 +1,11 @@
 const std = @import("std");
-const dbg = @import("dbg");
 
+const dbg = @import("zut").dbg;
 const Vec2 = @import("zml").Vec2;
 const BufStream = @import("bufstream.zig").BufStream;
 const GlyfTable = @import("tables/glyf.zig").GlyfTable;
 const MaxpTable = @import("tables/maxp.zig").MaxpTable;
-const enumMask = @import("lib.zig").enumMask;
+const enumMask = @import("ttf.zig").enumMask;
 
 pub const CompoundGlyph = struct {
     glyf: GlyfTable,

@@ -1,11 +1,11 @@
 const std = @import("std");
-const dbg = @import("dbg");
 const gm = @import("zml");
 
+const dbg = @import("zut").dbg;
 const BufStream = @import("bufstream.zig").BufStream;
 const GlyfTable = @import("tables/glyf.zig").GlyfTable;
 const MaxpTable = @import("tables/maxp.zig").MaxpTable;
-const mask = @import("lib.zig").mask;
+const mask = @import("ttf.zig").mask;
 
 pub const SimpleGlyph = struct {
     glyf: GlyfTable,
