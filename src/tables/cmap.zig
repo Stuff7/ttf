@@ -2,7 +2,7 @@ const std = @import("std");
 const dec = @import("dec.zig");
 
 const dbg = @import("zut").dbg;
-const BufStream = @import("../bufstream.zig").BufStream;
+const BufStream = @import("zap").BufStream;
 const HheaTable = @import("hhea.zig").HheaTable;
 const MaxpTable = @import("maxp.zig").MaxpTable;
 

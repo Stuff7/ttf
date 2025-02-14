@@ -1,4 +1,4 @@
-const BufStream = @import("../bufstream.zig").BufStream;
+const BufStream = @import("zap").BufStream;
 
 pub const MaxpTable = struct {
     major: u8,

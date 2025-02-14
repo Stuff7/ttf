@@ -1,5 +1,5 @@
 const std = @import("std");
-const BufStream = @import("../bufstream.zig").BufStream;
+const BufStream = @import("zap").BufStream;
 const MaxpTable = @import("maxp.zig").MaxpTable;
 const HeadTable = @import("head.zig").HeadTable;
 

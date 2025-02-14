@@ -1,5 +1,5 @@
 const dbg = @import("zut").dbg;
-const BufStream = @import("../bufstream.zig").BufStream;
+const BufStream = @import("zap").BufStream;
 
 pub const HeadTable = struct {
     major_version: u16,

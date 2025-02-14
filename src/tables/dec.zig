@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const dbg = @import("zut").dbg;
-const BufStream = @import("../bufstream.zig").BufStream;
+const BufStream = @import("zap").BufStream;
 
 pub const PlatformID = enum(u16) {
     unicode,

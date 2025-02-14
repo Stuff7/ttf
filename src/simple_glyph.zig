@@ -2,7 +2,7 @@ const std = @import("std");
 const gm = @import("zml");
 
 const dbg = @import("zut").dbg;
-const BufStream = @import("bufstream.zig").BufStream;
+const BufStream = @import("zap").BufStream;
 const GlyfTable = @import("tables/glyf.zig").GlyfTable;
 const MaxpTable = @import("tables/maxp.zig").MaxpTable;
 const mask = @import("ttf.zig").mask;
@@ -274,5 +274,45 @@ pub const SimpleGlyph = struct {
         for (self.points) |*p| {
             p.* *= vs;
         }
+    }
+
+    pub fn shape(glyph: SimpleGlyph, allocator: std.mem.Allocator) !gm.Shape {
+        const segments = try allocator.alloc(gm.Segment, gm.Segment.count(glyph.curve_flags));
+        const contour_ends = try allocator.alloc(usize, glyph.end_pts_of_contours.len);
+
+        var n: usize = 0;
+        var contour_idx: usize = 0;
+        var contour_start: usize = 0;
+        for (glyph.end_pts_of_contours) |end_idx| {
+            const contour_end = end_idx + 1;
+            const points = glyph.points[contour_start..contour_end];
+            if (points.len < 3) {
+                break;
+            }
+
+            const curve_flags = glyph.curve_flags[contour_start..contour_end];
+            contour_start = contour_end;
+
+            for (0..points.len) |i| {
+                if (n < segments.len) {
+                    if (gm.Segment.init(points, curve_flags, i)) |s| {
+                        segments[n] = s;
+                        n += 1;
+                    }
+                }
+            }
+            contour_ends[contour_idx] = n - 1;
+            contour_idx += 1;
+        }
+
+        return gm.Shape{
+            .segments = try allocator.realloc(segments, n),
+            .contour_ends = try allocator.realloc(contour_ends, contour_idx),
+        };
+    }
+
+    pub fn deinitShape(allocator: std.mem.Allocator, glyph_shape: gm.Shape) void {
+        allocator.free(glyph_shape.segments);
+        allocator.free(glyph_shape.contour_ends);
     }
 };

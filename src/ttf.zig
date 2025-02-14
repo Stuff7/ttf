@@ -1,5 +1,6 @@
 const std = @import("std");
 
+pub usingnamespace @import("atlas.zig");
 pub usingnamespace @import("parser.zig");
 pub usingnamespace @import("simple_glyph.zig");
 pub usingnamespace @import("compound_glyph.zig");
@@ -14,7 +15,7 @@ pub usingnamespace @import("tables/glyf.zig");
 pub usingnamespace @import("tables/maxp.zig");
 
 const dbg = @import("zut").dbg;
-const BufStream = @import("bufstream.zig").BufStream;
+const BufStream = @import("zap").BufStream;
 
 pub const Ttf = struct {
     sfnt_version: u32,

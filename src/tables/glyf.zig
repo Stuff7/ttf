@@ -1,5 +1,5 @@
 const Vec2 = @import("zml").Vec2;
-const BufStream = @import("../bufstream.zig").BufStream;
+const BufStream = @import("zap").BufStream;
 
 pub const GlyfTable = struct {
     number_of_contours: isize,

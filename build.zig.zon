@@ -5,12 +5,16 @@
 
     .dependencies = .{
         .zut = .{
-            .url = "git+https://github.com/Stuff7/zut#4828604fff6be8d1586ed642d6ce10571afc9f96",
-            .hash = "12201e78c948bae58fe25eade36a5eb981014f3a1f6116d75d32e1708dbf150f464f",
+            .url = "git+https://github.com/Stuff7/zut#6aa622baff09d5ebbbc2c865421b719cfa430ff0",
+            .hash = "1220549e991936cf72c4e574c126b9555b9a87563cdd86932d9830e4ea9b3f1b9803",
         },
         .zml = .{
-            .url = "git+https://github.com/Stuff7/zml#65dc9c00914b120777f8b18499617d31a60a804c",
-            .hash = "1220f02066ff6cdb5424981b186acd286d2d11e03d549501c74c21e566b2755545d6",
+            .url = "git+https://github.com/Stuff7/zml#98d7e72e4225c0dd7044acde9f09959a1a236d96",
+            .hash = "122024680c2e4020e403f5aadbe2b7af78e6c2d63bd4bb8d34738764cb6cb15b5d9e",
+        },
+        .zap = .{
+            .url = "git+https://github.com/Stuff7/zap#8a715c967d437c6d3f7f36d5d798430c9675e0fc",
+            .hash = "1220bff7c90016feaaf1ea398fdb0163d618a34a9c1aee2e38c28b6db4878da71b20",
         },
     },
 }

@@ -1,7 +1,7 @@
 const std = @import("std");
 const dec = @import("dec.zig");
 
-const BufStream = @import("../bufstream.zig").BufStream;
+const BufStream = @import("zap").BufStream;
 
 pub const NameTable = struct {
     version: u16,

@@ -8,7 +8,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = b.standardOptimizeOption(.{}),
         .src_path = "src/main.zig",
         .module = b.addModule("ttf", .{ .root_source_file = b.path("src/ttf.zig") }),
-        .dependencies = @constCast(&[_][]const u8{ "zut", "zml" }),
+        .dependencies = @constCast(&[_][]const u8{ "zut", "zml", "zap" }),
     };
     const exe = addBuildOption(b, info, null);
     b.installArtifact(exe);
