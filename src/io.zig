@@ -10,10 +10,10 @@ const mem = zut.mem;
 const SimpleGlyph = ttf.SimpleGlyph;
 const Allocator = std.mem.Allocator;
 
-pub fn drawGlyphBmp(allocator: Allocator, glyph: SimpleGlyph, w: i32, h: i32, path: []const u8) !void {
-    var bmp = try zap.Bmp(24).init(.{ .width = w, .height = h }, path);
-    const buffer = try allocator.alloc(u8, mem.intCast(usize, w * h) * bmp.px_len);
+pub fn drawGlyphBmp(allocator: Allocator, glyph: SimpleGlyph, w: usize, h: usize, path: []const u8) !void {
+    const buffer = try allocator.alloc(u8, mem.intCast(usize, w * h) * zap.Bmp(24).bytes_per_px);
     @memset(buffer, 20);
+    var bmp = try zap.Bmp(24).init(w, h, buffer);
 
     var sdf = gm.Sdf{};
     const shape = try glyph.shape(allocator);
@@ -21,7 +21,6 @@ pub fn drawGlyphBmp(allocator: Allocator, glyph: SimpleGlyph, w: i32, h: i32, pa
     dbg.dump(shape);
 
     const viewport = gm.Vec2{ mem.asFloat(f32, w), mem.asFloat(f32, h) };
-    const pixels = bmp.pixels(buffer);
     for (0..bmp.height) |y| {
         for (0..bmp.width) |x| {
             const p = gm.Vec2{ mem.asFloat(f32, x), mem.asFloat(f32, y) } / viewport;
@@ -34,39 +33,44 @@ pub fn drawGlyphBmp(allocator: Allocator, glyph: SimpleGlyph, w: i32, h: i32, pa
 
             const i = y * bmp.width + x;
             if (@abs(min_dist) <= 0.005) {
-                pixels[i].r = 255;
-                pixels[i].g = 255;
+                bmp.pixels[i].r = 255;
+                bmp.pixels[i].g = 255;
             } else if (min_dist > 0) {
-                pixels[i].g = 128;
-                pixels[i].b = 128;
+                bmp.pixels[i].g = 128;
+                bmp.pixels[i].b = 128;
             }
         }
     }
 
-    try bmp.writeData(buffer);
+    const file = try std.fs.cwd().createFile(path, .{});
+    defer file.close();
+    var writer = std.io.bufferedWriter(file.writer());
+    try bmp.write(&writer, null, null);
 }
 
-pub fn drawGlyphContourBmp(allocator: Allocator, glyph: SimpleGlyph, w: i32, h: i32, path: []const u8) !void {
-    var bmp = try zap.Bmp(24).init(.{ .width = w, .height = h }, path);
-    const buffer = try allocator.alloc(u8, mem.intCast(usize, w * h) * bmp.px_len);
+pub fn drawGlyphContourBmp(allocator: Allocator, glyph: SimpleGlyph, w: usize, h: usize, path: []const u8) !void {
+    const buffer = try allocator.alloc(u8, mem.intCast(usize, w * h) * zap.Bmp(24).bytes_per_px);
     @memset(buffer, 20);
+    var bmp = try zap.Bmp(24).init(w, h, buffer);
 
     const shape = try glyph.shape(allocator);
     dbg.dump(shape);
 
-    const pixels = bmp.pixels(buffer);
     for (shape.segments) |segment| {
         switch (segment) {
-            .line => |s| drawLineBmp(pixels, w, h, s.p0, s.p1, 255),
-            .curve => |s| drawQuadBezierBmp(pixels, w, h, s.p0, s.p1, s.p2, 255),
+            .line => |s| drawLineBmp(bmp, s.p0, s.p1, 255),
+            .curve => |s| drawQuadBezierBmp(bmp, s.p0, s.p1, s.p2, 255),
         }
     }
 
-    try bmp.writeData(buffer);
+    const file = try std.fs.cwd().createFile(path, .{});
+    defer file.close();
+    var writer = std.io.bufferedWriter(file.writer());
+    try bmp.write(&writer, null, null);
 }
 
-pub fn drawLineBmp(pixels: []zap.Bmp(24).Rgb, width: i32, height: i32, p0: gm.Vec2, p1: gm.Vec2, color: u8) void {
-    const v = gm.Vec2{ mem.asFloat(f32, width), mem.asFloat(f32, height) };
+pub fn drawLineBmp(bmp: zap.Bmp(24), p0: gm.Vec2, p1: gm.Vec2, color: u8) void {
+    const v = gm.Vec2{ mem.asFloat(f32, bmp.width), mem.asFloat(f32, bmp.height) };
     const p0v = p0 * v;
     const p1v = p1 * v;
     var x0: isize = @intFromFloat(p0v[0]);
@@ -82,9 +86,9 @@ pub fn drawLineBmp(pixels: []zap.Bmp(24).Rgb, width: i32, height: i32, p0: gm.Ve
     var e2: isize = 0;
 
     while (true) {
-        if (x0 >= 0 and x0 < width and y0 >= 0 and y0 < height) {
-            const i: usize = @intCast(y0 * mem.intCast(isize, width) + x0);
-            pixels[i].g = color;
+        if (x0 >= 0 and x0 < bmp.width and y0 >= 0 and y0 < bmp.height) {
+            const i: usize = @intCast(y0 * mem.intCast(isize, bmp.width) + x0);
+            bmp.pixels[i].g = color;
         }
         if (x0 == x1 and y0 == y1) {
             break;
@@ -101,7 +105,7 @@ pub fn drawLineBmp(pixels: []zap.Bmp(24).Rgb, width: i32, height: i32, p0: gm.Ve
     }
 }
 
-pub fn drawQuadBezierBmp(pixels: []zap.Bmp(24).Rgb, width: i32, height: i32, p0: gm.Vec2, p1: gm.Vec2, p2: gm.Vec2, color: u8) void {
+pub fn drawQuadBezierBmp(bmp: zap.Bmp(24), p0: gm.Vec2, p1: gm.Vec2, p2: gm.Vec2, color: u8) void {
     const steps: f32 = 64;
     var i: f32 = 0;
     while (i < steps) : (i += 1) {
@@ -111,6 +115,6 @@ pub fn drawQuadBezierBmp(pixels: []zap.Bmp(24).Rgb, width: i32, height: i32, p0:
         const q0 = gm.vec2.lerp(gm.vec2.lerp(p0, p1, t0), gm.vec2.lerp(p1, p2, t0), t0);
         const q1 = gm.vec2.lerp(gm.vec2.lerp(p0, p1, t1), gm.vec2.lerp(p1, p2, t1), t1);
 
-        drawLineBmp(pixels, width, height, q0, q1, color);
+        drawLineBmp(bmp, q0, q1, color);
     }
 }
