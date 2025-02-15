@@ -118,7 +118,7 @@ pub const Glyph = union(enum(u1)) {
             };
         } else {
             return Glyph{
-                .compound = try CompoundGlyph.parse(allocator, &glyf, maxp),
+                .compound = try CompoundGlyph.parse(allocator, &glyf, maxp, advance_width, lsb),
             };
         }
     }

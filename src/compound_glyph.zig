@@ -5,12 +5,16 @@ const dbg = zut.dbg;
 const Allocator = std.mem.Allocator;
 const Vec2 = @import("zml").Vec2;
 const BufStream = @import("zap").BufStream;
+const GlyphParser = @import("parser.zig").GlyphParser;
+const SimpleGlyph = @import("simple_glyph.zig").SimpleGlyph;
 const GlyfTable = @import("tables/glyf.zig").GlyfTable;
 const MaxpTable = @import("tables/maxp.zig").MaxpTable;
 
 pub const CompoundGlyph = struct {
     allocator: Allocator,
     glyf: GlyfTable,
+    advance_width: f32,
+    lsb: f32,
     components: []Component,
 
     const Flag = enum(u16) {
@@ -27,7 +31,7 @@ pub const CompoundGlyph = struct {
         pos: Vec2,
     };
 
-    pub fn parse(allocator: Allocator, glyf: *GlyfTable, maxp: MaxpTable) !CompoundGlyph {
+    pub fn parse(allocator: Allocator, glyf: *GlyfTable, maxp: MaxpTable, advance_width: f32, lsb: f32) !CompoundGlyph {
         var flags: u16 = 0;
         var num_components: usize = 0;
         const components = try allocator.alloc(Component, maxp.max_component_elements);
@@ -93,8 +97,18 @@ pub const CompoundGlyph = struct {
         return CompoundGlyph{
             .allocator = allocator,
             .glyf = glyf.*,
+            .advance_width = advance_width,
+            .lsb = lsb,
             .components = try allocator.realloc(components, num_components),
         };
+    }
+
+    pub fn expand(self: CompoundGlyph, parser: *GlyphParser) ![]SimpleGlyph {
+        const glyphs = try self.allocator.alloc(SimpleGlyph, self.components.len);
+        for (self.components, 0..) |c, i| {
+            glyphs[i] = (try parser.getGlyphById(self.allocator, c.idx)).simple;
+        }
+        return glyphs;
     }
 
     pub fn deinit(self: CompoundGlyph) void {
