@@ -3,7 +3,6 @@ const gm = @import("zml");
 const zut = @import("zut");
 const ttf = @import("ttf");
 const zap = @import("zap");
-const io = @import("io.zig");
 
 const dbg = zut.dbg;
 const utf8 = zut.utf8;
@@ -79,10 +78,18 @@ pub fn main() !void {
             g.simple.center(gm.Vec2{ 1, 1 });
 
             if (std.mem.eql(u8, args[7][3..], "-contour")) {
-                try io.drawGlyphContourBmp(allocator, g.simple, @intCast(w), @intCast(h), args[3]);
+                try ttf.drawGlyphContourBmp(allocator, g.simple, @intCast(w), @intCast(h), args[3]);
             } else {
-                try io.drawGlyphBmp(allocator, g.simple, @intCast(w), @intCast(h), args[3]);
+                try ttf.drawGlyphBmp(allocator, g.simple, @intCast(w), @intCast(h), args[3]);
             }
+        } else if (std.mem.eql(u8, args[7], "fl32")) {
+            var g = try parser.getGlyph(allocator, c);
+            g.simple.normalizeEm(parser.head.units_per_em);
+            try g.simple.addImplicitPoints(allocator);
+            g.simple.scale(0.7);
+            g.simple.translate(gm.Vec2{ 0.2, 0.2 });
+
+            try ttf.drawGlyphFl32(allocator, g.simple, w, h, args[3]);
         }
     } else {
         dbg.print("Unrecognized option", .{});

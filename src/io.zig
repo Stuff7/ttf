@@ -1,14 +1,37 @@
 const std = @import("std");
-const ttf = @import("ttf");
 const zap = @import("zap");
 const zut = @import("zut");
 const gm = @import("zml");
+const ttf = @import("ttf.zig");
 
 const m = std.math;
 const dbg = zut.dbg;
 const mem = zut.mem;
 const SimpleGlyph = ttf.SimpleGlyph;
 const Allocator = std.mem.Allocator;
+
+pub fn drawGlyphFl32(allocator: Allocator, glyph: SimpleGlyph, width: u32, height: u32, filename: []const u8) !void {
+    var dists = try SdfIterator.init(allocator, glyph, @floatFromInt(width), @floatFromInt(height));
+    defer dists.deinit();
+    dbg.dump(dists.shape);
+
+    var buffer = try allocator.alloc(f32, width * height);
+    defer allocator.free(buffer);
+
+    while (dists.next()) |min_dist| {
+        buffer[dists.i] = min_dist;
+    }
+
+    const fl32 = zap.Fl32{
+        .width = width,
+        .height = height,
+        .data = buffer,
+    };
+    const file = try std.fs.cwd().createFile(filename, .{});
+    defer file.close();
+
+    try fl32.write(file.writer());
+}
 
 pub fn drawGlyphBmp(allocator: Allocator, glyph: SimpleGlyph, w: usize, h: usize, path: []const u8) !void {
     const buffer = try allocator.alloc(u8, mem.intCast(usize, w * h) * zap.Bmp(24).bytes_per_px);
@@ -44,8 +67,7 @@ pub fn drawGlyphBmp(allocator: Allocator, glyph: SimpleGlyph, w: usize, h: usize
 
     const file = try std.fs.cwd().createFile(path, .{});
     defer file.close();
-    var writer = std.io.bufferedWriter(file.writer());
-    try bmp.write(&writer, null, null);
+    try bmp.write(file.writer(), null, null);
 }
 
 pub fn drawGlyphContourBmp(allocator: Allocator, glyph: SimpleGlyph, w: usize, h: usize, path: []const u8) !void {
@@ -65,8 +87,7 @@ pub fn drawGlyphContourBmp(allocator: Allocator, glyph: SimpleGlyph, w: usize, h
 
     const file = try std.fs.cwd().createFile(path, .{});
     defer file.close();
-    var writer = std.io.bufferedWriter(file.writer());
-    try bmp.write(&writer, null, null);
+    try bmp.write(file.writer(), null, null);
 }
 
 pub fn drawLineBmp(bmp: zap.Bmp(24), p0: gm.Vec2, p1: gm.Vec2, color: u8) void {
@@ -118,3 +139,52 @@ pub fn drawQuadBezierBmp(bmp: zap.Bmp(24), p0: gm.Vec2, p1: gm.Vec2, p2: gm.Vec2
         drawLineBmp(bmp, q0, q1, color);
     }
 }
+
+pub const SdfIterator = struct {
+    allocator: Allocator,
+    sdf: gm.Sdf = gm.Sdf{},
+    shape: gm.Shape,
+    viewport: gm.Vec2,
+    position: gm.Vec2 = gm.Vec2{ 0, 0 },
+    i: usize = 0,
+    curr_pos: gm.Uvec2 = gm.Uvec2{ 0, 0 },
+
+    pub fn init(allocator: Allocator, glyph: SimpleGlyph, width: f32, height: f32) !SdfIterator {
+        return SdfIterator{
+            .allocator = allocator,
+            .shape = try glyph.shape(allocator),
+            .viewport = gm.Vec2{ width, height },
+        };
+    }
+
+    pub fn deinit(self: SdfIterator) void {
+        SimpleGlyph.deinitShape(self.allocator, self.shape);
+    }
+
+    pub fn next(self: *SdfIterator) ?f32 {
+        if (self.position[1] == self.viewport[1]) {
+            return null;
+        }
+
+        const p = self.position / self.viewport;
+        var min_dist = m.floatMax(f32);
+
+        const dist = try self.sdf.shapeDistance(self.shape, p);
+        if (@abs(dist) < @abs(min_dist)) {
+            min_dist = dist;
+        }
+
+        std.debug.assert(min_dist >= -1 and min_dist <= 1);
+
+        self.i = @intFromFloat(self.position[1] * self.viewport[0] + self.position[0]);
+        self.curr_pos = @intFromFloat(self.position);
+        if (self.position[1] < self.viewport[1] and self.position[0] == self.viewport[0] - 1) {
+            self.position[1] += 1;
+            self.position[0] = 0;
+        } else {
+            self.position[0] += 1;
+        }
+
+        return min_dist;
+    }
+};

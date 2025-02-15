@@ -1,5 +1,6 @@
 const std = @import("std");
 
+pub usingnamespace @import("io.zig");
 pub usingnamespace @import("atlas.zig");
 pub usingnamespace @import("parser.zig");
 pub usingnamespace @import("simple_glyph.zig");
@@ -141,11 +142,3 @@ const TableRecord = struct {
         };
     }
 };
-
-pub fn mask(flag: anytype, bitmask: anytype) bool {
-    return (flag & bitmask) == bitmask;
-}
-
-pub fn enumMask(flag: anytype, bitmask: anytype) bool {
-    return mask(flag, @intFromEnum(bitmask));
-}

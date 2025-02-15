@@ -9,6 +9,7 @@ const utf8 = zut.utf8;
 const Allocator = std.mem.Allocator;
 const GlyphParser = ttf.GlyphParser;
 const SimpleGlyph = ttf.SimpleGlyph;
+const SdfIterator = @import("io.zig").SdfIterator;
 
 pub const Atlas = struct {
     num_glyphs: u32 = 0,
@@ -127,54 +128,5 @@ pub const Atlas = struct {
 
     pub fn deinit(self: Atlas) void {
         self.allocator.free(self.data);
-    }
-};
-
-pub const SdfIterator = struct {
-    allocator: Allocator,
-    sdf: gm.Sdf = gm.Sdf{},
-    shape: gm.Shape,
-    viewport: gm.Vec2,
-    position: gm.Vec2 = gm.Vec2{ 0, 0 },
-    i: usize = 0,
-    curr_pos: gm.Uvec2 = gm.Uvec2{ 0, 0 },
-
-    pub fn init(allocator: Allocator, glyph: SimpleGlyph, width: f32, height: f32) !SdfIterator {
-        return SdfIterator{
-            .allocator = allocator,
-            .shape = try glyph.shape(allocator),
-            .viewport = gm.Vec2{ width, height },
-        };
-    }
-
-    pub fn deinit(self: SdfIterator) void {
-        SimpleGlyph.deinitShape(self.allocator, self.shape);
-    }
-
-    pub fn next(self: *SdfIterator) ?f32 {
-        if (self.position[1] == self.viewport[1]) {
-            return null;
-        }
-
-        const p = self.position / self.viewport;
-        var min_dist = m.floatMax(f32);
-
-        const dist = try self.sdf.shapeDistance(self.shape, p);
-        if (@abs(dist) < @abs(min_dist)) {
-            min_dist = dist;
-        }
-
-        std.debug.assert(min_dist >= -1 and min_dist <= 1);
-
-        self.i = @intFromFloat(self.position[1] * self.viewport[0] + self.position[0]);
-        self.curr_pos = @intFromFloat(self.position);
-        if (self.position[1] < self.viewport[1] and self.position[0] == self.viewport[0] - 1) {
-            self.position[1] += 1;
-            self.position[0] = 0;
-        } else {
-            self.position[0] += 1;
-        }
-
-        return min_dist;
     }
 };

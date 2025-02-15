@@ -1,11 +1,11 @@
 const std = @import("std");
 const gm = @import("zml");
+const zut = @import("zut");
 
-const dbg = @import("zut").dbg;
+const dbg = zut.dbg;
 const BufStream = @import("zap").BufStream;
 const GlyfTable = @import("tables/glyf.zig").GlyfTable;
 const MaxpTable = @import("tables/maxp.zig").MaxpTable;
-const mask = @import("ttf.zig").mask;
 
 pub const SimpleGlyph = struct {
     glyf: GlyfTable,
@@ -73,14 +73,14 @@ pub const SimpleGlyph = struct {
             flag = try glyf.glyph_stream.readU8();
 
             try dbg.rtAssertFmt(
-                (!mask(flag, Flag.overlap_simple) or i == 0) and !mask(flag, Flag.reserved_bit),
+                (!zut.mem.mask(flag, Flag.overlap_simple) or i == 0) and !zut.mem.mask(flag, Flag.reserved_bit),
                 "OVERLAP_SIMPLE (bit 6) and RESERVED (bit 7) must be 0 in flag 0b{b:0>8} [{} / {}]",
                 .{ flag, i, num_points },
             );
 
             flags[i] = flag & ~Flag.repeat;
 
-            if (mask(flag, Flag.repeat)) {
+            if (zut.mem.mask(flag, Flag.repeat)) {
                 repeat = try glyf.glyph_stream.readU8();
                 try dbg.rtAssertFmt(
                     repeat != 0,
@@ -126,10 +126,10 @@ pub const SimpleGlyph = struct {
         var coord: i16 = 0;
 
         for (flags, points, curve_flags) |flag, *point, *on_curve| {
-            if (mask(flag, u8mask)) {
+            if (zut.mem.mask(flag, u8mask)) {
                 const offset: i16 = @intCast(try bs.readU8());
-                coord += if (mask(flag, instruction_mask)) offset else -offset;
-            } else if (!mask(flag, instruction_mask)) {
+                coord += if (zut.mem.mask(flag, instruction_mask)) offset else -offset;
+            } else if (!zut.mem.mask(flag, instruction_mask)) {
                 const delta = try bs.readAs(i16);
                 coord += delta;
             }
@@ -140,7 +140,7 @@ pub const SimpleGlyph = struct {
                 point[1] = @floatFromInt(coord);
             }
 
-            on_curve.* = mask(flag, Flag.curve);
+            on_curve.* = zut.mem.mask(flag, Flag.curve);
         }
     }
 

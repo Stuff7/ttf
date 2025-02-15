@@ -1,11 +1,11 @@
 const std = @import("std");
+const zut = @import("zut");
 
-const dbg = @import("zut").dbg;
+const dbg = zut.dbg;
 const Vec2 = @import("zml").Vec2;
 const BufStream = @import("zap").BufStream;
 const GlyfTable = @import("tables/glyf.zig").GlyfTable;
 const MaxpTable = @import("tables/maxp.zig").MaxpTable;
-const enumMask = @import("ttf.zig").enumMask;
 
 pub const CompoundGlyph = struct {
     glyf: GlyfTable,
@@ -46,7 +46,7 @@ pub const CompoundGlyph = struct {
             );
             num_components += 1;
 
-            if (enumMask(flags, Flag.arg_1_and_2_are_words)) {
+            if (zut.mem.enumMask(flags, Flag.arg_1_and_2_are_words)) {
                 const argument1 = try glyf.glyph_stream.readAs(i16);
                 const argument2 = try glyf.glyph_stream.readAs(i16);
                 component.pos[0] = @floatFromInt(argument1);
@@ -58,23 +58,23 @@ pub const CompoundGlyph = struct {
                 component.pos[1] = @floatFromInt(argument2);
             }
 
-            if (enumMask(flags, Flag.we_have_a_scale)) {
+            if (zut.mem.enumMask(flags, Flag.we_have_a_scale)) {
                 _ = try glyf.glyph_stream.readAs(i16); // scale
-            } else if (enumMask(flags, Flag.we_have_an_x_and_y_scale)) {
+            } else if (zut.mem.enumMask(flags, Flag.we_have_an_x_and_y_scale)) {
                 _ = try glyf.glyph_stream.readAs(i16); // xscale
                 _ = try glyf.glyph_stream.readAs(i16); // yscale
-            } else if (enumMask(flags, Flag.we_have_a_two_by_two)) {
+            } else if (zut.mem.enumMask(flags, Flag.we_have_a_two_by_two)) {
                 _ = try glyf.glyph_stream.readAs(i16); // xscale
                 _ = try glyf.glyph_stream.readAs(i16); // scale10
                 _ = try glyf.glyph_stream.readAs(i16); // scale01
                 _ = try glyf.glyph_stream.readAs(i16); // yscale
             }
-            if (!enumMask(flags, Flag.more_components)) {
+            if (!zut.mem.enumMask(flags, Flag.more_components)) {
                 break;
             }
         }
 
-        if (enumMask(flags, Flag.we_have_instructions)) {
+        if (zut.mem.enumMask(flags, Flag.we_have_instructions)) {
             const instructions_length = try glyf.glyph_stream.readAs(u16);
 
             if (maxp.major == 1) {
