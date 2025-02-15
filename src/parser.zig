@@ -1,6 +1,8 @@
 const std = @import("std");
 
 const dbg = @import("zut").dbg;
+const Allocator = std.mem.Allocator;
+const ArenaAllocator = std.heap.ArenaAllocator;
 const Ttf = @import("ttf.zig").Ttf;
 const BufStream = @import("zap").BufStream;
 const HeadTable = @import("tables/head.zig").HeadTable;
@@ -14,6 +16,7 @@ const SimpleGlyph = @import("simple_glyph.zig").SimpleGlyph;
 const CompoundGlyph = @import("compound_glyph.zig").CompoundGlyph;
 
 pub const GlyphParser = struct {
+    arena: ArenaAllocator,
     font: Ttf,
     head: HeadTable,
     maxp: MaxpTable,
@@ -24,7 +27,13 @@ pub const GlyphParser = struct {
     null_glyph: Glyph,
     glyph_stream: BufStream,
 
-    pub fn parse(allocator: std.mem.Allocator, path: []const u8) !GlyphParser {
+    pub fn parse(a: Allocator, path: []const u8) !GlyphParser {
+        var arena = ArenaAllocator.init(a);
+        const allocator = arena.allocator();
+
+        const file = try std.fs.cwd().openFile(path, .{});
+        defer file.close();
+
         var bs = try BufStream.fromFile(allocator, path);
         const font = try Ttf.parse(&bs);
 
@@ -47,6 +56,7 @@ pub const GlyphParser = struct {
         const cmap = try CmapTable.parse(allocator, &b);
 
         var parser = GlyphParser{
+            .arena = arena,
             .font = font,
             .head = head,
             .maxp = maxp,
@@ -63,7 +73,7 @@ pub const GlyphParser = struct {
         return parser;
     }
 
-    pub fn getGlyph(self: *GlyphParser, allocator: std.mem.Allocator, c: u21) !Glyph {
+    pub fn getGlyph(self: *GlyphParser, allocator: Allocator, c: u21) !Glyph {
         const id = try self.cmap.subtable.findGlyphId(self.maxp.num_glyphs, c);
         dbg.print("Glyph ID: {}", .{id});
         return self.getGlyphById(allocator, id) catch {
@@ -71,7 +81,7 @@ pub const GlyphParser = struct {
         };
     }
 
-    pub fn getGlyphById(self: *GlyphParser, allocator: std.mem.Allocator, id: usize) !Glyph {
+    pub fn getGlyphById(self: *GlyphParser, allocator: Allocator, id: usize) !Glyph {
         const offset = self.loca.offsets[id];
         const size = self.loca.offsets[id + 1] - offset;
         const advance_width, const lsb = if (id < self.hmtx.h_metrics.len)
@@ -89,13 +99,17 @@ pub const GlyphParser = struct {
         var bs = try self.glyph_stream.slice(offset, self.glyph_stream.buf.len - offset);
         return try Glyph.parse(allocator, &bs, self.maxp, advance_width, lsb);
     }
+
+    pub fn deinit(self: GlyphParser) void {
+        self.arena.deinit();
+    }
 };
 
 pub const Glyph = union(enum(u1)) {
     simple: SimpleGlyph,
     compound: CompoundGlyph,
 
-    pub fn parse(allocator: std.mem.Allocator, bs: *BufStream, maxp: MaxpTable, advance_width: f32, lsb: f32) !Glyph {
+    pub fn parse(allocator: Allocator, bs: *BufStream, maxp: MaxpTable, advance_width: f32, lsb: f32) !Glyph {
         var glyf = try GlyfTable.parse(bs);
 
         if (glyf.number_of_contours >= 0) {
@@ -106,6 +120,13 @@ pub const Glyph = union(enum(u1)) {
             return Glyph{
                 .compound = try CompoundGlyph.parse(allocator, &glyf, maxp),
             };
+        }
+    }
+
+    pub fn deinit(self: Glyph) void {
+        switch (self) {
+            .simple => |g| g.deinit(),
+            .compound => |g| g.deinit(),
         }
     }
 };

@@ -8,8 +8,8 @@ const dbg = zut.dbg;
 const utf8 = zut.utf8;
 
 pub fn main() !void {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
+    var arena = std.heap.GeneralPurposeAllocator(.{}).init;
+    defer _ = arena.deinit();
     const allocator = arena.allocator();
 
     const args = try std.process.argsAlloc(allocator);
@@ -26,7 +26,7 @@ pub fn main() !void {
     }
 
     if (std.mem.eql(u8, args[1], "atlas")) {
-        if (args.len < 6) {
+        if (args.len < 7) {
             const options = comptime utf8.clr("190") ++ "<ttf> <atlas> <width> <height> <glyphs>" ++ utf8.esc("0");
             var exe: [options.len + 50]u8 = undefined;
             // zig fmt: off
@@ -42,13 +42,16 @@ pub fn main() !void {
         }
 
         var parser = try ttf.GlyphParser.parse(allocator, args[2]);
+        defer parser.deinit();
         dbg.dump(parser);
         const w = try std.fmt.parseUnsigned(u32, args[4], 10);
         const h = try std.fmt.parseUnsigned(u32, args[5], 10);
         try ttf.Atlas.write(allocator, args[3], &parser, w, h, args[6]);
-        dbg.dump(try ttf.Atlas.read(allocator, args[3]));
+        const a = try ttf.Atlas.read(allocator, args[3]);
+        defer a.deinit();
+        dbg.dump(a);
     } else if (std.mem.eql(u8, args[1], "glyph")) {
-        if (args.len < 7) {
+        if (args.len < 8) {
             const options = comptime utf8.clr("190") ++ "<ttf> <glyph> <width> <height> <format>" ++ utf8.esc("0");
             var exe: [options.len + 50]u8 = undefined;
             // zig fmt: off
@@ -65,12 +68,14 @@ pub fn main() !void {
         }
 
         var parser = try ttf.GlyphParser.parse(allocator, args[2]);
+        defer parser.deinit();
         const w = try std.fmt.parseUnsigned(u32, args[5], 10);
         const h = try std.fmt.parseUnsigned(u32, args[6], 10);
         const c = try std.unicode.utf8Decode(args[4]);
 
         if (std.mem.eql(u8, args[7][0..3], "bmp")) {
             var g = try parser.getGlyph(allocator, c);
+            defer g.deinit();
             g.simple.normalize();
             try g.simple.addImplicitPoints(allocator);
             g.simple.scale(0.9);
@@ -84,6 +89,7 @@ pub fn main() !void {
             }
         } else if (std.mem.eql(u8, args[7], "fl32")) {
             var g = try parser.getGlyph(allocator, c);
+            defer g.deinit();
             g.simple.normalizeEm(parser.head.units_per_em);
             try g.simple.addImplicitPoints(allocator);
             g.simple.scale(0.7);

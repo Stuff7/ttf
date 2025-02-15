@@ -2,12 +2,14 @@ const std = @import("std");
 const zut = @import("zut");
 
 const dbg = zut.dbg;
+const Allocator = std.mem.Allocator;
 const Vec2 = @import("zml").Vec2;
 const BufStream = @import("zap").BufStream;
 const GlyfTable = @import("tables/glyf.zig").GlyfTable;
 const MaxpTable = @import("tables/maxp.zig").MaxpTable;
 
 pub const CompoundGlyph = struct {
+    allocator: Allocator,
     glyf: GlyfTable,
     components: []Component,
 
@@ -25,7 +27,7 @@ pub const CompoundGlyph = struct {
         pos: Vec2,
     };
 
-    pub fn parse(allocator: std.mem.Allocator, glyf: *GlyfTable, maxp: MaxpTable) !CompoundGlyph {
+    pub fn parse(allocator: Allocator, glyf: *GlyfTable, maxp: MaxpTable) !CompoundGlyph {
         var flags: u16 = 0;
         var num_components: usize = 0;
         const components = try allocator.alloc(Component, maxp.max_component_elements);
@@ -89,8 +91,13 @@ pub const CompoundGlyph = struct {
         }
 
         return CompoundGlyph{
+            .allocator = allocator,
             .glyf = glyf.*,
             .components = try allocator.realloc(components, num_components),
         };
+    }
+
+    pub fn deinit(self: CompoundGlyph) void {
+        self.allocator.free(self.components);
     }
 };

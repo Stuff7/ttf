@@ -3,11 +3,13 @@ const gm = @import("zml");
 const zut = @import("zut");
 
 const dbg = zut.dbg;
+const Allocator = std.mem.Allocator;
 const BufStream = @import("zap").BufStream;
 const GlyfTable = @import("tables/glyf.zig").GlyfTable;
 const MaxpTable = @import("tables/maxp.zig").MaxpTable;
 
 pub const SimpleGlyph = struct {
+    allocator: Allocator,
     glyf: GlyfTable,
     points: []gm.Vec2,
     curve_flags: []bool,
@@ -26,7 +28,7 @@ pub const SimpleGlyph = struct {
         const reserved_bit: u8 = 1 << 7;
     };
 
-    pub fn parse(allocator: std.mem.Allocator, glyf: *GlyfTable, maxp: MaxpTable, advance_width: f32, lsb: f32) !SimpleGlyph {
+    pub fn parse(allocator: Allocator, glyf: *GlyfTable, maxp: MaxpTable, advance_width: f32, lsb: f32) !SimpleGlyph {
         const number_of_contours: usize = @intCast(glyf.number_of_contours);
         const end_pts_of_contours = try allocator.alloc(u16, number_of_contours);
 
@@ -111,6 +113,7 @@ pub const SimpleGlyph = struct {
         glyf.glyph_stream.i = 0;
 
         return SimpleGlyph{
+            .allocator = allocator,
             .glyf = glyf.*,
             .points = points,
             .curve_flags = curve_flags,
@@ -144,7 +147,7 @@ pub const SimpleGlyph = struct {
         }
     }
 
-    pub fn addImplicitPoints(self: *SimpleGlyph, allocator: std.mem.Allocator) !void {
+    pub fn addImplicitPoints(self: *SimpleGlyph, allocator: Allocator) !void {
         var total_points = self.points.len;
         var consecutive_off_curve = false;
         for (0..self.points.len) |n| {
@@ -214,6 +217,7 @@ pub const SimpleGlyph = struct {
 
         allocator.free(self.points);
         allocator.free(self.end_pts_of_contours);
+        allocator.free(self.curve_flags);
         if (total_points != num_points) {
             self.points = try allocator.realloc(points, num_points);
             self.curve_flags = try allocator.realloc(on_curve, num_points);
@@ -276,7 +280,7 @@ pub const SimpleGlyph = struct {
         }
     }
 
-    pub fn shape(glyph: SimpleGlyph, allocator: std.mem.Allocator) !gm.Shape {
+    pub fn shape(glyph: SimpleGlyph, allocator: Allocator) !gm.Shape {
         const segments = try allocator.alloc(gm.Segment, gm.Segment.count(glyph.curve_flags));
         const contour_ends = try allocator.alloc(usize, glyph.end_pts_of_contours.len);
 
@@ -311,8 +315,14 @@ pub const SimpleGlyph = struct {
         };
     }
 
-    pub fn deinitShape(allocator: std.mem.Allocator, glyph_shape: gm.Shape) void {
+    pub fn deinitShape(allocator: Allocator, glyph_shape: gm.Shape) void {
         allocator.free(glyph_shape.segments);
         allocator.free(glyph_shape.contour_ends);
+    }
+
+    pub fn deinit(self: SimpleGlyph) void {
+        self.allocator.free(self.points);
+        self.allocator.free(self.curve_flags);
+        self.allocator.free(self.end_pts_of_contours);
     }
 };

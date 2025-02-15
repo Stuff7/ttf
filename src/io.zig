@@ -35,6 +35,7 @@ pub fn drawGlyphFl32(allocator: Allocator, glyph: SimpleGlyph, width: u32, heigh
 
 pub fn drawGlyphBmp(allocator: Allocator, glyph: SimpleGlyph, w: usize, h: usize, path: []const u8) !void {
     const buffer = try allocator.alloc(u8, mem.intCast(usize, w * h) * zap.Bmp(24).bytes_per_px);
+    defer allocator.free(buffer);
     @memset(buffer, 20);
     var bmp = try zap.Bmp(24).init(w, h, buffer);
 
@@ -72,10 +73,12 @@ pub fn drawGlyphBmp(allocator: Allocator, glyph: SimpleGlyph, w: usize, h: usize
 
 pub fn drawGlyphContourBmp(allocator: Allocator, glyph: SimpleGlyph, w: usize, h: usize, path: []const u8) !void {
     const buffer = try allocator.alloc(u8, mem.intCast(usize, w * h) * zap.Bmp(24).bytes_per_px);
+    defer allocator.free(buffer);
     @memset(buffer, 20);
     var bmp = try zap.Bmp(24).init(w, h, buffer);
 
     const shape = try glyph.shape(allocator);
+    defer SimpleGlyph.deinitShape(allocator, shape);
     dbg.dump(shape);
 
     for (shape.segments) |segment| {

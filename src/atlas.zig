@@ -80,6 +80,7 @@ pub const Atlas = struct {
             const x = i % cols;
             const y = rows - 1 - i / cols;
             var g = try parser.getGlyph(allocator, c);
+            defer g.deinit();
             switch (g) {
                 .simple => |*simple| {
                     simple.normalizeEm(parser.head.units_per_em);
@@ -127,6 +128,7 @@ pub const Atlas = struct {
     }
 
     pub fn deinit(self: Atlas) void {
+        self.allocator.free(self.glyphs);
         self.allocator.free(self.data);
     }
 };
