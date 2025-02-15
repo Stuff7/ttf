@@ -13,11 +13,8 @@ pub fn info(allocator: Allocator, args: [][:0]u8) !void {
         var exe: [options.len + 50]u8 = undefined;
         // zig fmt: off
         dbg.usage(try std.fmt.bufPrint(&exe, "{s} {s}", .{args[0], options}), .{
-            "ttf   ", "Path to ttf file",
-            "atlas ", "Output path for atlas file",
-            "width ", "Glyph width",
-            "height", "Glyph height",
-            "glyphs", "String of glyphs",
+            "ttf  ", "Path to ttf file",
+            "glyph", "Show info about this glyph",
         });
         // zig fmt: on
         return;
