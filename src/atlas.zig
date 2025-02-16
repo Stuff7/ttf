@@ -79,22 +79,19 @@ pub const Atlas = struct {
         while (chars.nextCodepoint()) |c| : (i += 1) {
             const x = i % cols;
             const y = rows - 1 - i / cols;
-            var g = try parser.getGlyph(allocator, c);
-            defer g.deinit();
-            switch (g) {
-                .simple => |*simple| {
-                    simple.normalizeEm(parser.head.units_per_em);
-                    try simple.addImplicitPoints(allocator);
-                    simple.scale(0.7);
-                    simple.translate(gm.Vec2{ 0.2, 0.2 });
-                    var dists = try SdfIterator.init(allocator, g.simple, @floatFromInt(width), @floatFromInt(height));
-                    defer dists.deinit();
+            const g = try parser.getGlyph(allocator, c);
+            var simple = try g.simplify(parser);
+            defer simple.deinit();
 
-                    while (dists.next()) |min_dist| {
-                        buffer[dists.curr_pos[1] * atlas_w + dists.curr_pos[0] + y * atlas_w * height + x * width] = min_dist;
-                    }
-                },
-                else => return error.TodoCompoundGlyph,
+            simple.normalizeEm(parser.head.units_per_em);
+            try simple.addImplicitPoints(allocator);
+            simple.scale(0.7);
+            simple.translate(gm.Vec2{ 0.2, 0.2 });
+            var dists = try SdfIterator.init(allocator, simple, @floatFromInt(width), @floatFromInt(height));
+            defer dists.deinit();
+
+            while (dists.next()) |min_dist| {
+                buffer[dists.curr_pos[1] * atlas_w + dists.curr_pos[0] + y * atlas_w * height + x * width] = min_dist;
             }
         }
 

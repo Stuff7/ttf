@@ -23,23 +23,15 @@ pub fn info(allocator: Allocator, args: [][:0]u8) !void {
     var parser = try ttf.GlyphParser.parse(allocator, args[1]);
     defer parser.deinit();
     const c = try std.unicode.utf8Decode(args[2]);
-    var g = try parser.getGlyph(allocator, c);
-    defer g.deinit();
+    const g = try parser.getGlyph(allocator, c);
 
-    switch (g) {
-        .simple => |simple| dbg.dump(simple),
-        .compound => |compound| {
-            dbg.dump(compound);
-            const glyphs = try compound.expand(&parser);
-            defer {
-                for (glyphs) |gl| {
-                    gl.deinit();
-                }
-                allocator.free(glyphs);
-            }
-            dbg.dump(glyphs);
-        },
+    if (g == .compound) {
+        dbg.dump(g.compound);
     }
+
+    const simple = try g.simplify(&parser);
+    defer simple.deinit();
+    dbg.dump(simple);
 }
 
 pub fn atlas(allocator: Allocator, args: [][:0]u8) !void {
@@ -92,27 +84,31 @@ pub fn glyph(allocator: Allocator, args: [][:0]u8) !void {
     const c = try std.unicode.utf8Decode(args[3]);
 
     if (std.mem.eql(u8, args[6][0..3], "bmp")) {
-        var g = try parser.getGlyph(allocator, c);
-        defer g.deinit();
-        g.simple.normalize();
-        try g.simple.addImplicitPoints(allocator);
-        g.simple.scale(0.9);
-        dbg.dump(g.simple.glyf);
-        g.simple.center(gm.Vec2{ 1, 1 });
+        const g = try parser.getGlyph(allocator, c);
+        var simple = try g.simplify(&parser);
+        defer simple.deinit();
+
+        simple.normalize();
+        try simple.addImplicitPoints(allocator);
+        simple.scale(0.9);
+        dbg.dump(simple.glyf);
+        simple.center(gm.Vec2{ 1, 1 });
 
         if (std.mem.eql(u8, args[6][3..], "-contour")) {
-            try ttf.drawGlyphContourBmp(allocator, g.simple, @intCast(w), @intCast(h), args[2]);
+            try ttf.drawGlyphContourBmp(allocator, simple, @intCast(w), @intCast(h), args[2]);
         } else {
-            try ttf.drawGlyphBmp(allocator, g.simple, @intCast(w), @intCast(h), args[2]);
+            try ttf.drawGlyphBmp(allocator, simple, @intCast(w), @intCast(h), args[2]);
         }
     } else if (std.mem.eql(u8, args[6], "fl32")) {
-        var g = try parser.getGlyph(allocator, c);
-        defer g.deinit();
-        g.simple.normalizeEm(parser.head.units_per_em);
-        try g.simple.addImplicitPoints(allocator);
-        g.simple.scale(0.7);
-        g.simple.translate(gm.Vec2{ 0.2, 0.2 });
+        const g = try parser.getGlyph(allocator, c);
+        var simple = try g.simplify(&parser);
+        defer simple.deinit();
 
-        try ttf.drawGlyphFl32(allocator, g.simple, w, h, args[2]);
+        simple.normalizeEm(parser.head.units_per_em);
+        try simple.addImplicitPoints(allocator);
+        simple.scale(0.7);
+        simple.translate(gm.Vec2{ 0.2, 0.2 });
+
+        try ttf.drawGlyphFl32(allocator, simple, w, h, args[2]);
     }
 }

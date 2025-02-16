@@ -1,5 +1,6 @@
 const std = @import("std");
 const zut = @import("zut");
+const gm = @import("zml");
 
 const dbg = zut.dbg;
 const Allocator = std.mem.Allocator;
@@ -103,12 +104,69 @@ pub const CompoundGlyph = struct {
         };
     }
 
-    pub fn expand(self: CompoundGlyph, parser: *GlyphParser) ![]SimpleGlyph {
+    /// Merge compound glyph components into a simple glyph.
+    /// Caller **must only free the returned simple glyph**.
+    /// Calling `CompoundGlyph.deinit` after calling this function is **undefined behavior**
+    pub fn simplify(self: CompoundGlyph, parser: *GlyphParser) !SimpleGlyph {
         const glyphs = try self.allocator.alloc(SimpleGlyph, self.components.len);
-        for (self.components, 0..) |c, i| {
-            glyphs[i] = (try parser.getGlyphById(self.allocator, c.idx)).simple;
+
+        defer self.allocator.free(glyphs);
+
+        var num_points: usize = 0;
+        var num_contours: usize = 0;
+
+        for (self.components, glyphs) |c, *g| {
+            g.* = (try parser.getGlyphById(self.allocator, c.idx)).simple;
+            num_points += g.points.len;
+            num_contours += g.end_pts_of_contours.len;
         }
-        return glyphs;
+        dbg.dump(glyphs);
+
+        defer for (glyphs) |gl| {
+            gl.deinit();
+        };
+
+        var simple = SimpleGlyph{
+            .allocator = self.allocator,
+            .glyf = self.glyf,
+            .advance_width = self.advance_width,
+            .lsb = self.lsb,
+            .points = try self.allocator.alloc(gm.Vec2, num_points),
+            .curve_flags = try self.allocator.alloc(bool, num_points),
+            .end_pts_of_contours = try self.allocator.alloc(u16, num_contours),
+        };
+
+        simple.glyf.number_of_contours = @intCast(num_contours);
+
+        var prev_g: ?SimpleGlyph = null;
+        var offset_points: usize = 0;
+        var offset_contours: usize = 0;
+
+        for (glyphs, self.components) |g, component| {
+            if (prev_g) |pg| {
+                offset_points += pg.points.len;
+                offset_contours += pg.end_pts_of_contours.len;
+            }
+
+            for (g.points, offset_points..) |p, j| {
+                simple.points[j] = p + component.pos;
+            }
+
+            @memcpy(simple.curve_flags[offset_points .. offset_points + g.curve_flags.len], g.curve_flags);
+
+            if (prev_g) |_| {
+                for (g.end_pts_of_contours, offset_contours..) |c, j| {
+                    simple.end_pts_of_contours[j] = @intCast(c + offset_points);
+                }
+            } else {
+                @memcpy(simple.end_pts_of_contours[0..g.end_pts_of_contours.len], g.end_pts_of_contours);
+            }
+
+            prev_g = g;
+        }
+        defer self.allocator.free(self.components);
+
+        return simple;
     }
 
     pub fn deinit(self: CompoundGlyph) void {

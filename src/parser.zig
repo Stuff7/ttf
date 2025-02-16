@@ -27,6 +27,7 @@ pub const GlyphParser = struct {
     null_glyph: Glyph,
     glyph_stream: BufStream,
 
+    /// Returned parser must be freed calling `GlyphParser.deinit`
     pub fn parse(a: Allocator, path: []const u8) !GlyphParser {
         var arena = ArenaAllocator.init(a);
         const allocator = arena.allocator();
@@ -73,6 +74,7 @@ pub const GlyphParser = struct {
         return parser;
     }
 
+    /// Returned glyph must be freed calling `Glyph.deinit` **unless stated otherwise**
     pub fn getGlyph(self: *GlyphParser, allocator: Allocator, c: u21) !Glyph {
         const id = try self.cmap.subtable.findGlyphId(self.maxp.num_glyphs, c);
         dbg.print("Glyph ID: {}", .{id});
@@ -81,6 +83,7 @@ pub const GlyphParser = struct {
         };
     }
 
+    /// Returned glyph must be freed calling `Glyph.deinit` **unless stated otherwise**
     pub fn getGlyphById(self: *GlyphParser, allocator: Allocator, id: usize) !Glyph {
         const offset = self.loca.offsets[id];
         const size = self.loca.offsets[id + 1] - offset;
@@ -109,6 +112,7 @@ pub const Glyph = union(enum(u1)) {
     simple: SimpleGlyph,
     compound: CompoundGlyph,
 
+    /// Returned glyph must be freed calling `Glyph.deinit` **unless stated otherwise**
     pub fn parse(allocator: Allocator, bs: *BufStream, maxp: MaxpTable, advance_width: f32, lsb: f32) !Glyph {
         var glyf = try GlyfTable.parse(bs);
 
@@ -121,6 +125,16 @@ pub const Glyph = union(enum(u1)) {
                 .compound = try CompoundGlyph.parse(allocator, &glyf, maxp, advance_width, lsb),
             };
         }
+    }
+
+    /// Merge compound glyph components into a simple glyph if the glyph is **not** simple already.
+    /// Caller **must only free the returned simple glyph**, calling `Glyph.deinit` after calling this
+    /// function is **undefined behavior**
+    pub fn simplify(self: Glyph, parser: *GlyphParser) !SimpleGlyph {
+        return switch (self) {
+            .simple => |simple| simple,
+            .compound => |compound| try compound.simplify(parser),
+        };
     }
 
     pub fn deinit(self: Glyph) void {
