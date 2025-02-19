@@ -5,8 +5,8 @@
 
     .dependencies = .{
         .zut = .{
-            .url = "git+https://github.com/Stuff7/zut#6aa622baff09d5ebbbc2c865421b719cfa430ff0",
-            .hash = "1220549e991936cf72c4e574c126b9555b9a87563cdd86932d9830e4ea9b3f1b9803",
+            .url = "git+https://github.com/Stuff7/zut#41ac311d19b5a378a2b20f2da0329c3435f80e27",
+            .hash = "122014da42f226b002d68eda74c49c14c0cc96f4620ff69cbf0e5dff42b9d20a95f2",
         },
         .zml = .{
             .url = "git+https://github.com/Stuff7/zml#98d7e72e4225c0dd7044acde9f09959a1a236d96",
