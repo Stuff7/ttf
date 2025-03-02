@@ -99,7 +99,7 @@ pub const Atlas = struct {
         try w.flush();
     }
 
-    const GlyphMap = std.StringArrayHashMap(gm.Vec2);
+    pub const GlyphMap = std.StringArrayHashMap(gm.Vec2);
     pub fn glyphMap(self: Atlas, allocator: Allocator) !GlyphMap {
         const cols: f32 = @floatFromInt(self.width / self.glyph_width);
         const rows: f32 = @floatFromInt(self.height / self.glyph_height);
