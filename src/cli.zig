@@ -41,7 +41,7 @@ pub fn atlas(allocator: Allocator, args: [][:0]u8) !void {
         // zig fmt: off
         dbg.usage(try std.fmt.bufPrint(&exe, "{s} {s}", .{args[0], options}), .{
             "ttf   ", "Path to ttf file",
-            "atlas ", "Output path for atlas file",
+            "atlas ", "Output path for atlas file (default format fl32, supports bmp)",
             "width ", "Glyph width",
             "height", "Glyph height",
             "glyphs", "String of glyphs",
@@ -56,10 +56,15 @@ pub fn atlas(allocator: Allocator, args: [][:0]u8) !void {
     const w = try std.fmt.parseUnsigned(u32, args[3], 10);
     const h = try std.fmt.parseUnsigned(u32, args[4], 10);
     const s = if (args.len > 6) std.fmt.parseFloat(f32, args[6]) catch 1 else 1;
-    try ttf.Atlas.write(allocator, args[2], &parser, w, h, args[5], s);
-    const a = try ttf.Atlas.read(allocator, args[2]);
-    defer a.deinit();
-    dbg.dump(a);
+
+    if (std.mem.eql(u8, args[2][args[2].len - 4 ..], ".bmp")) {
+        try ttf.Atlas.writeBmp(allocator, args[2], &parser, w, h, args[5], s);
+    } else {
+        try ttf.Atlas.write(allocator, args[2], &parser, w, h, args[5], s);
+        const a = try ttf.Atlas.read(allocator, args[2]);
+        defer a.deinit();
+        dbg.dump(a);
+    }
 }
 
 pub fn glyph(allocator: Allocator, args: [][:0]u8) !void {

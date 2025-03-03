@@ -107,6 +107,62 @@ pub const Atlas = struct {
         try w.flush();
     }
 
+    pub fn writeBmp(
+        allocator: Allocator,
+        filename: []const u8,
+        parser: *GlyphParser,
+        width: u32,
+        height: u32,
+        glyphs: []const u8,
+        scale: f32,
+    ) !void {
+        const num_glyphs: u32 = @intCast(try utf8.charLength(glyphs));
+        const size = @sqrt(@as(f32, @floatFromInt(num_glyphs)));
+        const cols: u32 = @intFromFloat(@ceil(size));
+        const rows: u32 = @intFromFloat(@round(size));
+        const atlas_w: u32 = cols * width;
+        const atlas_h: u32 = rows * height;
+
+        const zap = @import("zap");
+        const buffer = try allocator.alloc(u8, zut.mem.intCast(usize, atlas_w * atlas_h) * zap.Bmp(24).bytes_per_px);
+        defer allocator.free(buffer);
+        @memset(buffer, 20);
+        var bmp = try zap.Bmp(24).init(atlas_w, atlas_h, buffer);
+
+        var chars = (try std.unicode.Utf8View.init(glyphs)).iterator();
+        var i: usize = 0;
+        while (chars.nextCodepoint()) |c| : (i += 1) {
+            const x = i % cols;
+            const y = rows - 1 - i / cols;
+            const g = try parser.getGlyph(allocator, c);
+            var simple = try g.simplify(parser);
+            defer simple.deinit();
+
+            simple.normalizeEm(parser.head.units_per_em);
+            try simple.addImplicitPoints(allocator);
+            simple.scale(scale);
+
+            var dists = try SdfIterator.init(allocator, simple, @floatFromInt(width), @floatFromInt(height));
+            defer dists.deinit();
+
+            while (dists.next()) |min_dist| {
+                const idx = dists.curr_pos[1] * atlas_w + dists.curr_pos[0] + y * atlas_w * height + x * width;
+
+                if (@abs(min_dist) <= 0.005) {
+                    bmp.pixels[idx].r = 255;
+                    bmp.pixels[idx].g = 255;
+                } else if (min_dist > 0) {
+                    bmp.pixels[idx].g = 128;
+                    bmp.pixels[idx].b = 128;
+                }
+            }
+        }
+
+        const file = try std.fs.cwd().createFile(filename, .{});
+        defer file.close();
+        try bmp.write(file.writer(), null, null);
+    }
+
     pub const GlyphMap = std.AutoArrayHashMap(u21, gm.Vec2);
 
     pub fn glyphMap(self: Atlas, allocator: Allocator) !GlyphMap {
