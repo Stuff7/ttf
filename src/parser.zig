@@ -77,7 +77,7 @@ pub const GlyphParser = struct {
     /// Returned glyph must be freed calling `Glyph.deinit` **unless stated otherwise**
     pub fn getGlyph(self: *GlyphParser, allocator: Allocator, c: u21) !Glyph {
         const id = try self.cmap.subtable.findGlyphId(self.maxp.num_glyphs, c);
-        dbg.print("Glyph ID: {}", .{id});
+        dbg.print("Glyph: '{u}' ID: {}", .{ c, id });
         return self.getGlyphById(allocator, id) catch {
             return self.null_glyph;
         };

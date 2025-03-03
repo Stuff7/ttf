@@ -45,7 +45,15 @@ pub const Atlas = struct {
         return self;
     }
 
-    pub fn write(allocator: Allocator, filename: []const u8, parser: *GlyphParser, width: u32, height: u32, glyphs: []const u8) !void {
+    pub fn write(
+        allocator: Allocator,
+        filename: []const u8,
+        parser: *GlyphParser,
+        width: u32,
+        height: u32,
+        glyphs: []const u8,
+        scale: f32,
+    ) !void {
         const file = try std.fs.cwd().createFile(filename, .{});
         defer file.close();
 
@@ -85,8 +93,8 @@ pub const Atlas = struct {
 
             simple.normalizeEm(parser.head.units_per_em);
             try simple.addImplicitPoints(allocator);
-            simple.scale(0.7);
-            simple.translate(gm.Vec2{ 0.2, 0.2 });
+            simple.scale(scale);
+
             var dists = try SdfIterator.init(allocator, simple, @floatFromInt(width), @floatFromInt(height));
             defer dists.deinit();
 

@@ -36,7 +36,7 @@ pub fn info(allocator: Allocator, args: [][:0]u8) !void {
 
 pub fn atlas(allocator: Allocator, args: [][:0]u8) !void {
     if (args.len < 6) {
-        const options = comptime utf8.clr("190") ++ "<ttf> <atlas> <width> <height> <glyphs>" ++ utf8.esc("0");
+        const options = comptime utf8.clr("190") ++ "<ttf> <atlas> <width> <height> <glyphs> <scale?>" ++ utf8.esc("0");
         var exe: [options.len + 50]u8 = undefined;
         // zig fmt: off
         dbg.usage(try std.fmt.bufPrint(&exe, "{s} {s}", .{args[0], options}), .{
@@ -45,6 +45,7 @@ pub fn atlas(allocator: Allocator, args: [][:0]u8) !void {
             "width ", "Glyph width",
             "height", "Glyph height",
             "glyphs", "String of glyphs",
+            "scale ", "Glyph scale",
         });
         // zig fmt: on
         return;
@@ -54,7 +55,8 @@ pub fn atlas(allocator: Allocator, args: [][:0]u8) !void {
     defer parser.deinit();
     const w = try std.fmt.parseUnsigned(u32, args[3], 10);
     const h = try std.fmt.parseUnsigned(u32, args[4], 10);
-    try ttf.Atlas.write(allocator, args[2], &parser, w, h, args[5]);
+    const s = if (args.len > 6) std.fmt.parseFloat(f32, args[6]) catch 1 else 1;
+    try ttf.Atlas.write(allocator, args[2], &parser, w, h, args[5], s);
     const a = try ttf.Atlas.read(allocator, args[2]);
     defer a.deinit();
     dbg.dump(a);
@@ -62,7 +64,7 @@ pub fn atlas(allocator: Allocator, args: [][:0]u8) !void {
 
 pub fn glyph(allocator: Allocator, args: [][:0]u8) !void {
     if (args.len < 7) {
-        const options = comptime utf8.clr("190") ++ "<ttf> <glyph> <width> <height> <format>" ++ utf8.esc("0");
+        const options = comptime utf8.clr("190") ++ "<ttf> <glyph> <width> <height> <format> <scale?>" ++ utf8.esc("0");
         var exe: [options.len + 50]u8 = undefined;
         // zig fmt: off
         dbg.usage(try std.fmt.bufPrint(&exe, "{s} {s}", .{args[0], options}), .{
@@ -72,6 +74,7 @@ pub fn glyph(allocator: Allocator, args: [][:0]u8) !void {
             "width ", "Glyph width",
             "height", "Glyph height",
             "format", "Glyph file format bmp/bmp-contour/fl32",
+            "scale ", "Glyph scale (default 0.8)",
         });
         // zig fmt: on
         return;
@@ -81,6 +84,7 @@ pub fn glyph(allocator: Allocator, args: [][:0]u8) !void {
     defer parser.deinit();
     const w = try std.fmt.parseUnsigned(u32, args[4], 10);
     const h = try std.fmt.parseUnsigned(u32, args[5], 10);
+    const s = if (args.len > 7) std.fmt.parseFloat(f32, args[7]) catch 1 else 1;
     const c = try std.unicode.utf8Decode(args[3]);
 
     if (std.mem.eql(u8, args[6][0..3], "bmp")) {
@@ -88,11 +92,10 @@ pub fn glyph(allocator: Allocator, args: [][:0]u8) !void {
         var simple = try g.simplify(&parser);
         defer simple.deinit();
 
-        simple.normalize();
+        simple.normalizeEm(parser.head.units_per_em);
         try simple.addImplicitPoints(allocator);
-        simple.scale(0.9);
+        simple.scale(s);
         dbg.dump(simple.glyf);
-        simple.center(gm.Vec2{ 1, 1 });
 
         if (std.mem.eql(u8, args[6][3..], "-contour")) {
             try ttf.drawGlyphContourBmp(allocator, simple, @intCast(w), @intCast(h), args[2]);
@@ -106,8 +109,7 @@ pub fn glyph(allocator: Allocator, args: [][:0]u8) !void {
 
         simple.normalizeEm(parser.head.units_per_em);
         try simple.addImplicitPoints(allocator);
-        simple.scale(0.7);
-        simple.translate(gm.Vec2{ 0.2, 0.2 });
+        simple.scale(s);
 
         try ttf.drawGlyphFl32(allocator, simple, w, h, args[2]);
     }

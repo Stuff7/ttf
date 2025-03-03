@@ -13,13 +13,15 @@ const Allocator = std.mem.Allocator;
 pub fn drawGlyphFl32(allocator: Allocator, glyph: SimpleGlyph, width: u32, height: u32, filename: []const u8) !void {
     var dists = try SdfIterator.init(allocator, glyph, @floatFromInt(width), @floatFromInt(height));
     defer dists.deinit();
-    dbg.dump(dists.shape);
+    dbg.dump(dists);
 
     var buffer = try allocator.alloc(f32, width * height);
     defer allocator.free(buffer);
 
-    while (dists.next()) |min_dist| {
-        buffer[dists.i] = min_dist;
+    var i: usize = 0;
+
+    while (dists.next()) |min_dist| : (i += 1) {
+        buffer[i] = min_dist;
     }
 
     const fl32 = zap.Fl32{
@@ -27,9 +29,9 @@ pub fn drawGlyphFl32(allocator: Allocator, glyph: SimpleGlyph, width: u32, heigh
         .height = height,
         .data = buffer,
     };
+
     const file = try std.fs.cwd().createFile(filename, .{});
     defer file.close();
-
     try fl32.write(file.writer());
 }
 
@@ -39,30 +41,19 @@ pub fn drawGlyphBmp(allocator: Allocator, glyph: SimpleGlyph, w: usize, h: usize
     @memset(buffer, 20);
     var bmp = try zap.Bmp(24).init(w, h, buffer);
 
-    var sdf = gm.Sdf{};
-    const shape = try glyph.shape(allocator);
-    defer SimpleGlyph.deinitShape(allocator, shape);
-    dbg.dump(shape);
+    var dists = try SdfIterator.init(allocator, glyph, @floatFromInt(w), @floatFromInt(h));
+    defer dists.deinit();
+    dbg.dump(dists);
 
-    const viewport = gm.Vec2{ mem.asFloat(f32, w), mem.asFloat(f32, h) };
-    for (0..bmp.height) |y| {
-        for (0..bmp.width) |x| {
-            const p = gm.Vec2{ mem.asFloat(f32, x), mem.asFloat(f32, y) } / viewport;
-            var min_dist = m.floatMax(f32);
+    var i: usize = 0;
 
-            const dist = try sdf.shapeDistance(shape, p);
-            if (@abs(dist) < @abs(min_dist)) {
-                min_dist = dist;
-            }
-
-            const i = y * bmp.width + x;
-            if (@abs(min_dist) <= 0.005) {
-                bmp.pixels[i].r = 255;
-                bmp.pixels[i].g = 255;
-            } else if (min_dist > 0) {
-                bmp.pixels[i].g = 128;
-                bmp.pixels[i].b = 128;
-            }
+    while (dists.next()) |min_dist| : (i += 1) {
+        if (@abs(min_dist) <= 0.005) {
+            bmp.pixels[i].r = 255;
+            bmp.pixels[i].g = 255;
+        } else if (min_dist > 0) {
+            bmp.pixels[i].g = 128;
+            bmp.pixels[i].b = 128;
         }
     }
 
@@ -149,7 +140,6 @@ pub const SdfIterator = struct {
     shape: gm.Shape,
     viewport: gm.Vec2,
     position: gm.Vec2 = gm.Vec2{ 0, 0 },
-    i: usize = 0,
     curr_pos: gm.Uvec2 = gm.Uvec2{ 0, 0 },
 
     pub fn init(allocator: Allocator, glyph: SimpleGlyph, width: f32, height: f32) !SdfIterator {
@@ -177,10 +167,8 @@ pub const SdfIterator = struct {
             min_dist = dist;
         }
 
-        std.debug.assert(min_dist >= -1 and min_dist <= 1);
-
-        self.i = @intFromFloat(self.position[1] * self.viewport[0] + self.position[0]);
         self.curr_pos = @intFromFloat(self.position);
+
         if (self.position[1] < self.viewport[1] and self.position[0] == self.viewport[0] - 1) {
             self.position[1] += 1;
             self.position[0] = 0;

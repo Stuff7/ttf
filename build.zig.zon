@@ -13,8 +13,8 @@
             .hash = "122024680c2e4020e403f5aadbe2b7af78e6c2d63bd4bb8d34738764cb6cb15b5d9e",
         },
         .zap = .{
-            .url = "git+https://github.com/Stuff7/zap#4615df2063343cdff87fe087a0d390e372ed1041",
-            .hash = "1220a96fa2049dafb0bcce84fe7a70f15b1a67ac3094ed756e50f8e093e9922bdc3e",
+            .url = "git+https://github.com/Stuff7/zap#20286d85d7a81a4642724debd97383adadd7c4ba",
+            .hash = "122030459badf7f6a68f30807e38c3673117648a073b4ae335d1651f8218c2ed758e",
         },
     },
 }

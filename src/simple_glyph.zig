@@ -263,6 +263,9 @@ pub const SimpleGlyph = struct {
     }
 
     pub fn translate(self: *SimpleGlyph, d: gm.Vec2) void {
+        self.glyf.min += d;
+        self.glyf.max += d;
+
         for (self.points) |*p| {
             p.* += d;
         }
